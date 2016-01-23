@@ -1,10 +1,6 @@
 <launch>
-  <node name="depth_algorithm" pkg="depth_algorithm" type="depth_algorithm_node" output="screen" >
-    <param name="video_device" value="/dev/video0" />
-    <param name="image_width" value="640" />
-    <param name="image_height" value="480" />
-    <param name="pixel_format" value="yuyv" />
-    <param name="camera_frame_id" value="usb_cam" />
-    <param name="io_method" value="mmap"/>
-  </node>
+  <node  pkg="depth_algorithm" type="visual_analysis" name="depth_algorithm_visual_analysis"/>
+  <node  pkg="depth_algorithm" type="image_converter" name="depth_algorithm_depth_analysis"/>
+  <node  pkg="depth_algorithm" type="test" name="depth_algorithm_test"/>
 </launch>
+

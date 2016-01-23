@@ -7,6 +7,8 @@ project(depth_algorithm)
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
+  pcl_conversions
+  pcl_ros
   roscpp
   sensor_msgs
   std_msgs
@@ -196,5 +198,9 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 #add_dependencies(talker beginner_tutorials_generate_messages_cpp)
 
 add_executable(image_converter src/image_converter.cpp)
+add_executable(pcl_subscriber src/pcl_subscriber.cpp)
+add_executable(visual_analysis src/visual_analysis.cpp)
 target_link_libraries(image_converter ${catkin_LIBRARIES})
+target_link_libraries(pcl_subscriber ${catkin_LIBRARIES})
+target_link_libraries(visual_analysis ${catkin_LIBRARIES})
 #add_dependencies(image_converter beginner_tutorials_generate_messages_cpp)
