@@ -12,7 +12,11 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  genmsg
+  cmake_modules
 )
+
+find_package(GSL REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -104,10 +108,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES depth_algorithm
-#  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs std_msgs
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES depth_algorithm
+  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs std_msgs
+  DEPENDS system_lib OpenCV
 )
 
 ###########
@@ -196,11 +200,15 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 #add_executable(talker src/talker.cpp)
 #target_link_libraries(talker ${catkin_LIBRARIES})
 #add_dependencies(talker beginner_tutorials_generate_messages_cpp)
+add_library(CorrelationTester src/CorrelationTester.cpp)
 
 add_executable(image_converter src/image_converter.cpp)
 add_executable(pcl_subscriber src/pcl_subscriber.cpp)
 add_executable(visual_analysis src/visual_analysis.cpp)
+
+#add_executable(CorrelationTester src/CorrelationTester.cpp)
 target_link_libraries(image_converter ${catkin_LIBRARIES})
 target_link_libraries(pcl_subscriber ${catkin_LIBRARIES})
-target_link_libraries(visual_analysis ${catkin_LIBRARIES})
-#add_dependencies(image_converter beginner_tutorials_generate_messages_cpp)
+target_link_libraries(visual_analysis ${catkin_LIBRARIES} CorrelationTester ${catkin_LIBRARIES})
+#target_link_libraries(CorrelationTester ${catkin_LIBRARIES})
+#${catkin_LIBRARIES} ${OpenCV_LIBRARIES}

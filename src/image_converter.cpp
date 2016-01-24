@@ -383,8 +383,6 @@ void imageCb(const sensor_msgs::ImageConstPtr& msg)
 						}
 					}
 				}
-				
-		
 		}
 
 		cv::imshow(OPENCV_WINDOW , depth_image);
