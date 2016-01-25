@@ -33,19 +33,16 @@ public:
 
   void depthCb(const sensor_msgs::ImageConstPtr& msg){
 	depthMsgPtr = msg;
-	std::cout << corrTestPtr->getMomentumCorrelation(msg) << "\n";
+	std::cout << corrTestPtr->getDepthData(msg) << "\n";
   }
 
   void rgbCb(const sensor_msgs::ImageConstPtr& msg){
 	rgbMsgPtr = msg;
 	std::cout << corrTestPtr->getOpticalFrequencyCorrelation(msg) << "\n";
-	
   }
   
   void pclCb(const sensor_msgs::PointCloud2ConstPtr& msg){
 	pclMsgPtr = msg;
-		//PointCloud::Ptr cloud2_in (new PointCloud);
-		//pcl::fromROSMsg (*next_input, *cloud2_in);
 	}
 };
 

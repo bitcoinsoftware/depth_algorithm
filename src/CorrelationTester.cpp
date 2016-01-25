@@ -1,9 +1,9 @@
 #include "CorrelationTester.hpp"
 
 CorrelationTester::CorrelationTester(){
-	OPENCV_OPTIC_WINDOW = "Optic window";
+	//OPENCV_OPTIC_WINDOW = "Optic window";
 	OPENCV_DEPTH_WINDOW = "Depth window";
-	cv::namedWindow(OPENCV_OPTIC_WINDOW);
+	//cv::namedWindow(OPENCV_OPTIC_WINDOW);
 	cv::namedWindow(OPENCV_DEPTH_WINDOW);
 	maxDepthValue = 0;
     minDepthValue = 0;
@@ -27,9 +27,13 @@ void CorrelationTester::getExtremalMatrixValues(const cv::Mat& mat){
 		maxDepthValue = tempMax;
 }
 
+double CorrelationTester::getCorrelationCoefficient(int arrayLength, double array1[], double array2[]){
+	//TODO
+	return -1;
+}
+
 double CorrelationTester::getOpticalFrequencyCorrelation(const sensor_msgs::ImageConstPtr& msg){
 	cv_bridge::CvImagePtr cv_mat_ptr;
-	//gsl_stats_correlation (const double data1[], const size_t stride1, const double data2[], const size_t stride2, const size_t n)
     try{
 		cv_mat_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
 		cv::Mat rgb_image;
@@ -39,6 +43,7 @@ double CorrelationTester::getOpticalFrequencyCorrelation(const sensor_msgs::Imag
 			int depthSectionAmount = static_cast<int>((maxDepthValue - minDepthValue)/depthRangeSectionWidth);
 			double * depthSectionValueArray = new double[depthSectionAmount];
 			double * opticalFrequencyArray  = new double[depthSectionAmount];
+			double * spacialMomentumArray   = new double[depthSectionAmount];
 			
 			cv::Mat depthRangeMask;
 			cv::inRange(depth_image, cv::Scalar(0), cv::Scalar(minimalDepth), depthRangeMask);
@@ -46,13 +51,17 @@ double CorrelationTester::getOpticalFrequencyCorrelation(const sensor_msgs::Imag
 			rgb_image.copyTo(rgbImageForUndisclosedDepth, depthRangeMask);
 			
 			for (int i =0; i<depthSectionAmount; i++){ 
-				*(depthSectionValueArray + i) = static_cast<double>(i);
+				*(depthSectionValueArray + i) = static_cast<double>(i); //save the depth value
 				cv::Mat rgbMaskedImage;
 				//we will use the depth image as a mask for the rgb image
 				//we build a mask from the pixels of the depth image which value is in (i*depthRangeSectionWidth , (i+1)*depthRangeSectionWidth )
 				cv::inRange(depth_image, cv::Scalar(i*depthRangeSectionWidth + minimalDepth), cv::Scalar((i+1)*depthRangeSectionWidth), depthRangeMask);
 				rgb_image.copyTo(rgbMaskedImage, depthRangeMask);
-				
+				*(spacialMomentumArray + i) = static_cast<double>(cv::moments(rgb_image).m00); //register the spacial momentum of the image corespoding to the depth = i
+				cv::Mat dft;//we count the momentum of the images dft, because momentum(dft) ~ optical_frequency
+				getImageDFT(rgbMaskedImage, dft);
+				*(opticalFrequencyArray + i) = static_cast<double>(cv::moments(dft).m00);
+				//glue 3 matrices together so we can display them in one cv window
 				cv::Mat combine(rgb_image.size().height, rgb_image.size().width*3, CV_8UC1);
 				cv::Mat left_roi(combine, cv::Rect(0, 0, rgb_image.size().width, rgb_image.size().height));
 				rgb_image.copyTo(left_roi);
@@ -60,68 +69,20 @@ double CorrelationTester::getOpticalFrequencyCorrelation(const sensor_msgs::Imag
 				rgbMaskedImage.copyTo(center_roi);
 				cv::Mat right_roi(combine, cv::Rect(2*rgb_image.size().width, 0, rgb_image.size().width, rgb_image.size().height));
 				rgbImageForUndisclosedDepth.copyTo(right_roi);
-
-				cv::Size size(combine.size().width/2, combine.size().height/2);
-				cv::resize(combine, combine, size);
-				
 				cv::imshow(OPENCV_DEPTH_WINDOW , combine);
 				cv::waitKey(3);
 			}
-			
+			//gsl_stats_correlation (const double data1[], const size_t stride1, const double data2[], const size_t stride2, const size_t n)
+			//count the correlation
+			//double opticalFrequencyCorrelation = gsl::gsl_stats_correlation(opticalFrequencyArray, 1, depthSectionValueArray, 1, depthSectionAmount);
+			double opticalFrequencyCorrelation = getCorrelationCoefficient(depthSectionAmount, opticalFrequencyArray, depthSectionValueArray);
+			//double corr = Stats::Moments::correlation<int>(4, x , y);
+			std::cout<< opticalFrequencyCorrelation << "\n";
 			delete depthSectionValueArray;
 			delete opticalFrequencyArray;
-		}
-		
-		/*
-		cv::vector<cv::vector<cv::Point> > contours;
-		cv::vector<cv::Vec4i> hierarchy;
-		
-		
-		
-		cv::Size image_size = cv_mat_ptr->image.size();
-		
-		
-		double symetry_perspective_threshold = 3;
-		int range_width = 2; // depth iteration step in the loop
-		int d_max_observed   = int(max);
-		double d_max = d_max_observed*2;
-		double spatial_ratio = 4;
-		double minimum_slope_value = 1/spatial_ratio;
-		int range_amount = d_max_observed/range_width;
-
-		int spatial_moment, weight_center_x, weight_center_y;
-		std::vector<double> argumentVector, depthVectorXMin, depthVectorXMax, depthVectorYMin, depthVectorYMax;
-		std::vector<double> centerXVector, centerYVector;
-		// ITERATE THROUGH THE DEPTH IN range_width STEPS
-		cv::Mat thresh_output;
-		for (int i=0; i<= d_max_observed; i=i+range_width )
-		{   //LEAVE ONLY IMAGE WITH DEPTH IN RANGE (i , i+range_width) 
-			cv::threshold( depth_image, thresh_output, i, d_max_observed, cv::THRESH_TOZERO );
-			cv::threshold( thresh_output, thresh_output, (i+range_width), d_max_observed, cv::THRESH_TOZERO_INV );
-			//COUNT IMAGE MOMENTS AND SAVE THEM IN A VECTOR
-			cv::Moments image_moment = cv::moments(thresh_output);
-			spatial_moment = image_moment.m00;
+			delete spacialMomentumArray;
 			
-			if (spatial_moment > 1){
-				weight_center_x = image_moment.m10 / spatial_moment;
-				weight_center_y = image_moment.m01 / spatial_moment;
-				centerXVector.push_back(weight_center_x);
-				centerYVector.push_back(weight_center_y);
-								
-				double half_spatial_moment_sqrt = sqrt(spatial_moment)/spatial_ratio;
-				double min_x = weight_center_x - half_spatial_moment_sqrt;
-				double max_x = weight_center_x + half_spatial_moment_sqrt;
-				double min_y = weight_center_y - half_spatial_moment_sqrt;
-				double max_y = weight_center_x + half_spatial_moment_sqrt;
-				argumentVector.push_back(i);
-				depthVectorXMin.push_back(min_x);
-				depthVectorXMax.push_back(max_x);
-				depthVectorYMin.push_back(min_y);
-				depthVectorYMax.push_back(max_y);
-			}
-		}		
-		*/
-		
+		}
 	  return 1;
     }
     catch (cv_bridge::Exception& e){
@@ -133,19 +94,12 @@ double CorrelationTester::getOpticalFrequencyCorrelation(const sensor_msgs::Imag
 	return 0;
 }
 
-double CorrelationTester::getMomentumCorrelation(const sensor_msgs::ImageConstPtr& msg){
+double CorrelationTester::getDepthData(const sensor_msgs::ImageConstPtr& msg){
 	cv_bridge::CvImagePtr cv_mat_ptr;
     try{
-		//TODO image analysis - momentum - depth corellation
 		cv_mat_ptr = cv_bridge::toCvCopy(msg);
-		//cv::Mat depth_image;
 		cv_mat_ptr->image.convertTo(depth_image,CV_8U, 25.5);
-		//depthMat = depth_image;
-		//cv::imshow(OPENCV_DEPTH_WINDOW , depth_image);
-		//cv::waitKey(3);
 		getExtremalMatrixValues(depth_image);
-		
-		
     }
     catch (cv_bridge::Exception& e){
       ROS_ERROR("cv_bridge exception: %s", e.what());
@@ -155,3 +109,59 @@ double CorrelationTester::getMomentumCorrelation(const sensor_msgs::ImageConstPt
 	}
 	return 0;
 }
+
+void CorrelationTester::getImageDFT(const cv::Mat& mat, cv::Mat& magI){
+	cv::Mat padded; //expand input image to optimal size
+    int m = cv::getOptimalDFTSize( mat.rows );
+    int n = cv::getOptimalDFTSize( mat.cols ); // on the border add zero values
+    cv::copyMakeBorder(mat, padded, 0, m - mat.rows, 0, n - mat.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    cv::Mat planes[] = {cv::Mat_<float>(padded), cv::Mat::zeros(padded.size(), CV_32F)};
+    cv::Mat complexI;
+    cv::merge(planes, 2, complexI);         // Add to the expanded another plane with zeros
+    cv::dft(complexI, complexI);            // this way the result may fit in the source matrix
+    
+    // compute the magnitude and switch to logarithmic scale
+    // => log(1 + sqrt(Re(DFT(I))^2 + Im(DFT(I))^2))
+    cv::split(complexI, planes);                   // planes[0] = Re(DFT(I), planes[1] = Im(DFT(I))
+    cv::magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude
+    magI = planes[0];
+
+    magI += cv::Scalar::all(1);                    // switch to logarithmic scale
+    cv::log(magI, magI);
+    
+
+	
+    // crop the spectrum, if it has an odd number of rows or columns
+    magI = magI(cv::Rect(0, 0, magI.cols & -2, magI.rows & -2));
+    
+
+    // rearrange the quadrants of Fourier image  so that the origin is at the image center
+    int cx = magI.cols/2;
+    int cy = magI.rows/2;
+
+    cv::Mat q0(magI, cv::Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant
+    cv::Mat q1(magI, cv::Rect(cx, 0, cx, cy));  // Top-Right
+    cv::Mat q2(magI, cv::Rect(0, cy, cx, cy));  // Bottom-Left
+    cv::Mat q3(magI, cv::Rect(cx, cy, cx, cy)); // Bottom-Right
+
+    cv::Mat tmp;                           // swap quadrants (Top-Left with Bottom-Right)
+    q0.copyTo(tmp);
+    q3.copyTo(q0);
+    tmp.copyTo(q3);
+
+    q1.copyTo(tmp);                    // swap quadrant (Top-Right with Bottom-Left)
+    q2.copyTo(q1);
+    tmp.copyTo(q2);
+
+    cv::normalize(magI, magI, 0, 1, CV_MINMAX); // Transform the matrix with float values into a
+                                                // viewable image form (float between values 0 and 1).
+
+    cv::resize(magI, magI, mat.size());
+    
+    //cv::imshow("magI" , magI);
+	//cv::waitKey(3);
+
+	}
+	
+

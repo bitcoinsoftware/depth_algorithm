@@ -3,16 +3,18 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <gsl/gsl_math.h>
 #include <exception>
 #include <vector>
+
 class CorrelationTester{
 public:
   CorrelationTester();      
   ~CorrelationTester();        
   double getOpticalFrequencyCorrelation(const sensor_msgs::ImageConstPtr& msg);
-  double getMomentumCorrelation(const sensor_msgs::ImageConstPtr& msg);
+  double getDepthData(const sensor_msgs::ImageConstPtr& msg);
   void   getExtremalMatrixValues(const cv::Mat& mat);
+  void   getImageDFT(const cv::Mat& mat, cv::Mat& outputMat);
+  double getCorrelationCoefficient(int arrayLength, double array1[], double array2[]);
   
   std::string OPENCV_OPTIC_WINDOW;
   std::string OPENCV_DEPTH_WINDOW;

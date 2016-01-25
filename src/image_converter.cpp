@@ -36,7 +36,6 @@ class ImageConverter
   cv::Mat edges_image;
   cv::Mat edges_image2;
   
-  
 public:
   ImageConverter()
     : it_(nh_)
